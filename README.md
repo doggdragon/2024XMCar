@@ -15,21 +15,115 @@
 
 ## 引脚连接
 
-| 功能 | 引脚 | 备注 |
-|------|------|------|
-| **MPU6050 SCL** | PB6 | I2C1 |
-| **MPU6050 SDA** | PB7 | I2C1 |
-| **OLED SCL** | PB10 | I2C2 |
-| **OLED SDA** | PB11 | I2C2 |
-| **LED** | PB9 | 高电平亮 |
-| **蜂鸣器** | PB8 | |
-| **按键1 (模式)** | PB4 | 低电平触发 |
-| **按键2 (启动)** | PB3 | 低电平触发 |
-| 红外传感器 1-8 | PA15,PA8,PA11,PB15,PA7,PB14,PA6,PB13 | |
-| 左电机 IN1/IN2 | PA3/PA4 | |
-| 右电机 IN1/IN2 | PA0/PA5 | |
-| 左电机 PWM | PA2 | TIM2 CH3 |
-| 右电机 PWM | PA1 | TIM2 CH2 |
+### I2C 总线
+
+| 总线 | SCL | SDA | 设备 | 地址 | 速率 |
+|------|-----|-----|------|------|------|
+| I2C1 | **PB6** | **PB7** | MPU6050 | 0x68 | 400kHz |
+| I2C2 | **PB10** | **PB11** | SSD1306 OLED | 0x3C (7位) / 0x78 (8位) | 400kHz |
+
+### MPU6050 六轴陀螺仪 (I2C1: PB6/PB7)
+
+| MPU6050 引脚 | STM32 引脚 | 说明 |
+|-------------|-----------|------|
+| VCC | 3.3V | 供电 |
+| GND | GND | 地 |
+| SCL | **PB6** | I2C 时钟 |
+| SDA | **PB7** | I2C 数据 |
+| AD0 | GND | 地址选择 (接地=0x68) |
+| INT | 不接 | DMP 轮询模式，不需要中断 |
+| XDA/XCL | 不接 | 不使用外部磁力计 |
+
+### SSD1306 OLED 128×32 (I2C2: PB10/PB11)
+
+| OLED 引脚 | STM32 引脚 | 说明 |
+|----------|-----------|------|
+| VCC | 3.3V | 供电 |
+| GND | GND | 地 |
+| SCL | **PB10** | I2C 时钟 |
+| SDA | **PB11** | I2C 数据 |
+
+### 8 路红外循迹传感器
+
+陀螺仪方向为 X 轴朝前。传感器按从左到右顺序排列：
+
+| 编号 | STM32 引脚 | 状态字节位 | 位置 | 检测到线时 |
+|------|-----------|-----------|------|-----------|
+| TRACK1 | **PA15** | bit7 (MSB) | 最左 | HIGH |
+| TRACK2 | **PA8** | bit6 | 左二 | HIGH |
+| TRACK3 | **PA11** | bit5 | 左三 | HIGH |
+| TRACK4 | **PB15** | bit4 | 中间偏左 | HIGH |
+| TRACK5 | **PA7** | bit3 | 中间偏右 | HIGH |
+| TRACK6 | **PB14** | bit2 | 右三 | HIGH |
+| TRACK7 | **PA6** | bit1 | 右二 | HIGH |
+| TRACK8 | **PB13** | bit0 (LSB) | 最右 | HIGH |
+
+- 全部配置为 **输入上拉 (INPUT_PULLUP)**
+- 检测到黑线 → 传感器输出 HIGH → 对应位 = 1
+- 白底无黑线 → 传感器输出 LOW → 对应位 = 0
+- `Get_Infrared_State()` 返回值 = 0x00 表示所有传感器都检测到线（机器人正对黑线）
+- 返回值 = 0xFF 表示所有传感器都在白底上（机器人离线）
+
+### 双路直流电机
+
+**左电机：**
+
+| 电机驱动引脚 | STM32 引脚 | 功能 | 正转时 | 反转时 |
+|-------------|-----------|------|--------|--------|
+| IN1 | **PA3** | 方向控制 | HIGH | LOW |
+| IN2 | **PA4** | 方向控制 | LOW | HIGH |
+| PWM | **PA2** (TIM2 CH3) | 速度控制 | analogWrite 0-255 | |
+
+**右电机：**
+
+| 电机驱动引脚 | STM32 引脚 | 功能 | 正转时 | 反转时 |
+|-------------|-----------|------|--------|--------|
+| IN1 | **PA0** | 方向控制 | HIGH | LOW |
+| IN2 | **PA5** | 方向控制 | LOW | HIGH |
+| PWM | **PA1** (TIM2 CH2) | 速度控制 | analogWrite 0-255 | |
+
+- PWM 频率: ~1kHz (默认)
+- 占空比映射: 速度值 0~50 → analogWrite 0~255
+- 速度范围: [-50, 50]，负值表示反转
+- PID 输出限制: 速度 5~40
+
+### 按键与指示
+
+| 外设 | STM32 引脚 | 模式 | 有效电平 | 说明 |
+|------|-----------|------|---------|------|
+| **LED** | **PB9** | 推挽输出 | **HIGH** = 亮 | 状态指示灯 |
+| **蜂鸣器** | **PB8** | 推挽输出 | LOW = 响 | 提示音 |
+| **Key1 (模式)** | **PB4** | 输入上拉 | **LOW** = 按下 | 循环切换 4 种模式 |
+| **Key2 (启动)** | **PB3** | 输入上拉 | **LOW** = 按下 | 启动当前模式 |
+
+> **注意**: PB3/PB4 默认是 JTAG 引脚，代码中已通过 `AFIO->MAPR` 禁用 JTAG（保留 SWD）以将 PB3/PB4 用作普通 GPIO。
+
+### 完整引脚总表
+
+| STM32 引脚 | 功能 | 方向 | 备注 |
+|-----------|------|------|------|
+| PA0 | 右电机 IN1 | OUTPUT | |
+| PA1 | 右电机 PWM | OUTPUT | TIM2 CH2 |
+| PA2 | 左电机 PWM | OUTPUT | TIM2 CH3 |
+| PA3 | 左电机 IN1 | OUTPUT | |
+| PA4 | 左电机 IN2 | OUTPUT | |
+| PA5 | 右电机 IN2 | OUTPUT | |
+| PA6 | TRACK7 | INPUT_PULLUP | |
+| PA7 | TRACK5 | INPUT_PULLUP | |
+| PA8 | TRACK2 | INPUT_PULLUP | |
+| PA11 | TRACK3 | INPUT_PULLUP | |
+| PA15 | TRACK1 | INPUT_PULLUP | |
+| PB3 | Key2 (启动) | INPUT_PULLUP | 需禁用 JTAG |
+| PB4 | Key1 (模式) | INPUT_PULLUP | 需禁用 JTAG |
+| PB6 | MPU6050 SCL | I2C1 | |
+| PB7 | MPU6050 SDA | I2C1 | |
+| PB8 | 蜂鸣器 | OUTPUT | |
+| PB9 | LED | OUTPUT | HIGH=亮 |
+| PB10 | OLED SCL | I2C2 | |
+| PB11 | OLED SDA | I2C2 | |
+| PB13 | TRACK8 | INPUT_PULLUP | |
+| PB14 | TRACK6 | INPUT_PULLUP | |
+| PB15 | TRACK4 | INPUT_PULLUP | |
 
 ## 开发环境
 
