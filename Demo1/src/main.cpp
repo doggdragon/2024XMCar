@@ -6,7 +6,7 @@
 TwoWire OLED_WIRE(PB11, PB10);
 Adafruit_SSD1306 display(128, 32, &OLED_WIRE, -1);
 
-float Yaw = 0;
+float Yaw = 0, gyro_bias = 0;
 unsigned long last_us = 0;
 uint8_t all_state = 0;
 int step = 1;
@@ -23,21 +23,21 @@ int16_t readGyroZ() {
 // ==== IR sensors (matches Keil: bit=1 means line detected) ====
 uint8_t readIR() {
     uint8_t ir = 0;
-    if (digitalRead(PA15)) ir |= 0x80;
-    if (digitalRead(PA8))  ir |= 0x40;
-    if (digitalRead(PA11)) ir |= 0x20;
-    if (digitalRead(PB15)) ir |= 0x10;
-    if (digitalRead(PA7))  ir |= 0x08;
-    if (digitalRead(PB14)) ir |= 0x04;
-    if (digitalRead(PA6))  ir |= 0x02;
-    if (digitalRead(PB13)) ir |= 0x01;
+    if (!digitalRead(PA15)) ir |= 0x80;
+    if (!digitalRead(PA8))  ir |= 0x40;
+    if (!digitalRead(PA11)) ir |= 0x20;
+    if (!digitalRead(PB15)) ir |= 0x10;
+    if (!digitalRead(PA7))  ir |= 0x08;
+    if (!digitalRead(PB14)) ir |= 0x04;
+    if (!digitalRead(PA6))  ir |= 0x02;
+    if (!digitalRead(PB13)) ir |= 0x01;
     return ir;
 }
 
 // ==== Keys (LOW=pressed, matches Keil) ====
 uint8_t readKey() {
-    if (digitalRead(PB4) == LOW) { delay(20); while(digitalRead(PB4)==LOW); delay(20); return 1; }
-    if (digitalRead(PB3) == LOW) { delay(20); while(digitalRead(PB3)==LOW); delay(20); return 2; }
+    if (digitalRead(PC9) == LOW) { delay(20); while(digitalRead(PC9)==LOW); delay(20); return 1; }
+    if (digitalRead(PC8) == LOW) { delay(20); while(digitalRead(PC8)==LOW); delay(20); return 2; }
     return 0;
 }
 
@@ -103,8 +103,7 @@ void setup() {
     display.begin(SSD1306_SWITCHCAPVCC,0x3C);
     display.setTextSize(1); display.setTextColor(SSD1306_WHITE);
 
-    RCC->APB2ENR|=0x00000001; AFIO->MAPR=(AFIO->MAPR&~0x07000000)|0x02000000;
-    pinMode(PB4,INPUT_PULLUP); pinMode(PB3,INPUT_PULLUP);
+    pinMode(PC9,INPUT_PULLUP); pinMode(PC8,INPUT_PULLUP);
     pinMode(PA15,INPUT_PULLUP); pinMode(PA8,INPUT_PULLUP); pinMode(PA11,INPUT_PULLUP); pinMode(PB15,INPUT_PULLUP);
     pinMode(PA7,INPUT_PULLUP); pinMode(PB14,INPUT_PULLUP); pinMode(PA6,INPUT_PULLUP); pinMode(PB13,INPUT_PULLUP);
     pinMode(PA3,OUTPUT); pinMode(PA4,OUTPUT); pinMode(PA0,OUTPUT); pinMode(PA5,OUTPUT);
@@ -115,6 +114,13 @@ void setup() {
     Wire.beginTransmission(0x68); Wire.write(0x6B); Wire.write(0x00); Wire.endTransmission();
     delay(100);
     Wire.beginTransmission(0x68); Wire.write(0x1B); Wire.write(0x18); Wire.endTransmission();
+
+    display.clearDisplay();
+    display.setCursor(0,0); display.println(F("Calibrating"));
+    display.display();
+    long gsum = 0;
+    for (int i = 0; i < 200; i++) { gsum += readGyroZ(); delay(10); }
+    gyro_bias = gsum / 200.0f;
 
     display.clearDisplay();
     display.setCursor(0,0); display.println(F("READY"));
@@ -129,7 +135,8 @@ void loop() {
     unsigned long now = micros();
     float dt = (now - last_us) / 1000000.0f;
     last_us = now;
-    Yaw += (readGyroZ() / 16.4f) * dt;
+    if (dt > 0.1f) dt = 0.01f;
+    Yaw += ((readGyroZ() - gyro_bias) / 16.4f) * dt;
     if (Yaw > 180) Yaw -= 360; else if (Yaw < -180) Yaw += 360;
 
     uint8_t ir = readIR();
