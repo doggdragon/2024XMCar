@@ -788,36 +788,8 @@ int mpu_init(void)
         return -1;
 
 #if defined MPU6050
-    /* Check product revision. */
-    if (i2c_read(st.hw->addr, st.reg->accel_offs, 6, data))
-        return -1;
-    rev = ((data[5] & 0x01) << 2) | ((data[3] & 0x01) << 1) |
-        (data[1] & 0x01);
-
-    if (rev) {
-        /* Congrats, these parts are better. */
-        if (rev == 1)
-            st.chip_cfg.accel_half = 1;
-        else if (rev == 2)
-            st.chip_cfg.accel_half = 0;
-        else {
-            //log_e("Unsupported software product rev %d.\n");
-            return -1;
-        }
-    } else {
-        if (i2c_read(st.hw->addr, st.reg->prod_id, 1, &(data[0])))
-            return -1;
-        rev = data[0] & 0x0F;
-        if (!rev) {
-           // log_e("Product ID read as 0 indicates device is either "
-                //"incompatible or an MPU3050.\n");
-            return -1;
-        } else if (rev == 4) {
-            //log_i("Half sensitivity part found.\n");
-            st.chip_cfg.accel_half = 1;
-        } else
-            st.chip_cfg.accel_half = 0;
-    }
+    /* Clone chip (WHO=0x70) - skip rev check */
+    st.chip_cfg.accel_half = 0;
 #elif defined MPU6500
 #define MPU6500_MEM_REV_ADDR    (0x17)
     if (mpu_read_mem(MPU6500_MEM_REV_ADDR, 1, &rev))
@@ -2871,7 +2843,7 @@ lp_int_restore:
 
 #define q30  1073741824.0f
 static signed char gyro_orientation[9] = { 1, 0, 0,//��Ҫ��
-                                           0, 1, 0,
+                                           0,-1, 0,
                                            0, 0, 1};
 //MPU6050�Բ���
 //����ֵ:0,����
@@ -2884,23 +2856,22 @@ void get_ms(unsigned long *time){}
 //    ����,ʧ��	
 u8 MPU6050_DMP_Init(void)
 {
-	MPU6050_IIC_IO_Init();                                                    
-	if(!mpu_init())                                                               //mpu��ʼ��
-	{	
-		mpu_set_sensors(INV_XYZ_GYRO | INV_XYZ_ACCEL);		                      //������Ҫ�Ĵ�����
-		mpu_configure_fifo(INV_XYZ_GYRO | INV_XYZ_ACCEL);	                      //����fifo
-		mpu_set_sample_rate(DEFAULT_MPU_HZ);	   	  		                        //���òɼ�����,��ø���fifo��������int�ж�
-		dmp_load_motion_driver_firmware();   	  			                          //����dmp�̼�
-		dmp_set_orientation(inv_orientation_matrix_to_scalar(gyro_orientation));//���������Ƿ���
-		dmp_enable_feature(DMP_FEATURE_6X_LP_QUAT | DMP_FEATURE_TAP |
-		    DMP_FEATURE_ANDROID_ORIENT | DMP_FEATURE_SEND_RAW_ACCEL | DMP_FEATURE_SEND_CAL_GYRO |
-		    DMP_FEATURE_GYRO_CAL);	   	 					                                //dmp_enable_feature
-		dmp_set_fifo_rate(DEFAULT_MPU_HZ);   	 			                            //���òɼ�����,��ø���fifo��������int�ж�
-		run_self_test();		                                                        //�Լ�
-		mpu_set_dmp_state(1);                                                   //ʹ��
-	}
-	return 0;
+    MPU6050_IIC_IO_Init();
+    if (mpu_init()) return 1;
+    if (mpu_set_sensors(INV_XYZ_GYRO | INV_XYZ_ACCEL)) return 2;
+    if (mpu_configure_fifo(INV_XYZ_GYRO | INV_XYZ_ACCEL)) return 3;
+    if (mpu_set_sample_rate(DEFAULT_MPU_HZ)) return 4;
+    if (dmp_load_motion_driver_firmware()) return 5;
+    if (dmp_set_orientation(inv_orientation_matrix_to_scalar(gyro_orientation))) return 6;
+    if (dmp_enable_feature(DMP_FEATURE_6X_LP_QUAT | DMP_FEATURE_TAP |
+        DMP_FEATURE_ANDROID_ORIENT | DMP_FEATURE_SEND_RAW_ACCEL | DMP_FEATURE_SEND_CAL_GYRO |
+        DMP_FEATURE_GYRO_CAL)) return 7;
+    if (dmp_set_fifo_rate(DEFAULT_MPU_HZ)) return 8;
+    run_self_test();
+    if (mpu_set_dmp_state(1)) return 9;
+    return 0;
 }
+
 
 //�õ�dmp�����������(ע��,��������Ҫ�Ƚ϶��ջ,�ֲ������е��)
 //pitch:������ ����:0.1��   ��Χ:-90.0�� <---> +90.0��

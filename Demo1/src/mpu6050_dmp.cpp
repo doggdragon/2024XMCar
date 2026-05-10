@@ -3,7 +3,7 @@
 
 // ===== I2C via Wire =====
 extern "C" u8 mpu6050_write(u8 addr, u8 reg, u8 len, u8 *buf) {
-    Wire.beginTransmission(addr >> 1);  // 8-bit to 7-bit address
+    Wire.beginTransmission(addr);  // 8-bit to 7-bit address
     Wire.write(reg);
     for (u8 i = 0; i < len; i++) {
         Wire.write(buf[i]);
@@ -13,12 +13,12 @@ extern "C" u8 mpu6050_write(u8 addr, u8 reg, u8 len, u8 *buf) {
 }
 
 extern "C" u8 mpu6050_read(u8 addr, u8 reg, u8 len, u8 *buf) {
-    Wire.beginTransmission(addr >> 1);
+    Wire.beginTransmission(addr);
     Wire.write(reg);
     u8 result = Wire.endTransmission(false);  // repeated start
     if (result != 0) return 1;
 
-    Wire.requestFrom(addr >> 1, len);
+    Wire.requestFrom(addr, len);
     for (u8 i = 0; i < len; i++) {
         if (Wire.available()) {
             buf[i] = Wire.read();
