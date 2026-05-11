@@ -442,7 +442,12 @@ void loop() {
                 digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
                 delay(500);
                 digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
-                delay(50); pidTrack(0,0); step++; break; }
+                delay(50); pidTrack(0,0);
+                if (step == 4 || step == 8 || step == 12) {
+                    MPU6050_DMP_Init();
+                    delay(100);
+                }
+                step++; break; }
             case 17: setMotor(0,0); all_state &= 0x0F; step = 0; break;
             }
         }
@@ -511,6 +516,10 @@ void loop() {
                 delay(500);
                 digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
                 delay(50); pidTrack(0,0);
+                if (corner == 2 || corner == 4 || corner == 6) {
+                    MPU6050_DMP_Init();
+                    delay(100);
+                }
                 corner++;
             }
             delay(30);
