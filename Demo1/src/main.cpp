@@ -276,29 +276,31 @@ void loop() {
         digitalWrite(PB9,HIGH); delay(10);
         while (step != 0) {
             switch (step) {
-            case 1: delay(100);
+            case 1: { delay(100);
+                uint32_t t0 = millis();
                 while (1) {
                     readDmpYaw();
                     int yi = (int)(((Yaw<0)?Yaw+360:Yaw) + 0.5f);
                     int p = pidAngle(-38, yi);
                     int L=12-p, R=12+p; if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20; setMotor(L,R);
-                    if (readGrayBits() != 0) {
+                    if (millis() - t0 > 3000 && readGrayBits() != 0) {
                         delay(10);
                         if (readGrayBits() != 0) break;
                     }
                 }
                 digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
-                delay(200);
+                delay(500);
                 digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
-                setMotor(0,0); delay(50); pidTrack(0,0); step=2; break;
-            case 2:
+                setMotor(0,0); delay(50); pidTrack(0,0); step=2; break; }
+            case 2: {
+                uint32_t t0 = millis();
                 yaw_arc_start = Yaw;
                 lost_cnt = 0;
                 while (1) {
                     uint8_t ir = readGrayBits();
                     if (ir == 0) {
                         lost_cnt++;
-                        if (lost_cnt > 40) { track_state = 'X'; break; }
+                        if (lost_cnt > 40 && millis() - t0 > 3000) { track_state = 'X'; break; }
                         track_state = 'L';
                         setMotor(5, 15);
                         if (lost_cnt < 25) delay(5);
@@ -311,32 +313,34 @@ void loop() {
                     }
                 }
                 digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
-                delay(200);
+                delay(500);
                 digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
-                setMotor(0,0); delay(50); pidTrack(0,0); step=3; break;
-            case 3:
+                setMotor(0,0); delay(50); pidTrack(0,0); step=3; break; }
+            case 3: {
+                uint32_t t0 = millis();
                 while (1) {
                     readDmpYaw();
                     int yi = (int)(((Yaw<0)?Yaw+360:Yaw) + 0.5f);
                     int p = pidAngle(-128, yi);
                     int L=12-p, R=12+p; if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20; setMotor(L,R);
-                    if (readGrayBits() != 0) {
+                    if (millis() - t0 > 3000 && readGrayBits() != 0) {
                         delay(10);
                         if (readGrayBits() != 0) break;
                     }
                 }
                 digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
-                delay(200);
+                delay(500);
                 digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
-                setMotor(0,0); delay(50); pidTrack(0,0); step=4; break;
-            case 4:
+                setMotor(0,0); delay(50); pidTrack(0,0); step=4; break; }
+            case 4: {
+                uint32_t t0 = millis();
                 yaw_arc_start = Yaw;
                 lost_cnt = 0;
                 while (1) {
                     uint8_t ir = readGrayBits();
                     if (ir == 0) {
                         lost_cnt++;
-                        if (lost_cnt > 40) { track_state = 'X'; break; }
+                        if (lost_cnt > 40 && millis() - t0 > 3000) { track_state = 'X'; break; }
                         track_state = 'L';
                         setMotor(15, 5);
                         if (lost_cnt < 25) delay(5);
@@ -349,9 +353,9 @@ void loop() {
                     }
                 }
                 digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
-                delay(200);
+                delay(500);
                 digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
-                setMotor(0,0); delay(50); pidTrack(0,0); step=5; break;
+                setMotor(0,0); delay(50); pidTrack(0,0); step=5; break; }
             case 5: setMotor(0,0); all_state &= 0x0F; step = 0; break;
             }
         }
