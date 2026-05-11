@@ -277,12 +277,19 @@ void loop() {
         while (step != 0) {
             switch (step) {
             case 1: delay(100);
-                while (readGrayBits() == 0) {
+                while (1) {
                     readDmpYaw();
                     int yi = (int)(((Yaw<0)?Yaw+360:Yaw) + 0.5f);
                     int p = pidAngle(-38, yi);
                     int L=12-p, R=12+p; if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20; setMotor(L,R);
+                    if (readGrayBits() != 0) {
+                        delay(10);
+                        if (readGrayBits() != 0) break;
+                    }
                 }
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
+                delay(200);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
                 setMotor(0,0); delay(50); pidTrack(0,0); step=2; break;
             case 2:
                 yaw_arc_start = Yaw;
@@ -303,14 +310,24 @@ void loop() {
                         int L=8-p, R=8+p; if(L<2)L=2;if(L>14)L=14;if(R<2)R=2;if(R>14)R=14; setMotor(L,R);
                     }
                 }
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
+                delay(200);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
                 setMotor(0,0); delay(50); pidTrack(0,0); step=3; break;
             case 3:
-                while (readGrayBits() == 0) {
+                while (1) {
                     readDmpYaw();
                     int yi = (int)(((Yaw<0)?Yaw+360:Yaw) + 0.5f);
-                    int p = pidAngle(-140, yi);
+                    int p = pidAngle(-128, yi);
                     int L=12-p, R=12+p; if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20; setMotor(L,R);
+                    if (readGrayBits() != 0) {
+                        delay(10);
+                        if (readGrayBits() != 0) break;
+                    }
                 }
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
+                delay(200);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
                 setMotor(0,0); delay(50); pidTrack(0,0); step=4; break;
             case 4:
                 yaw_arc_start = Yaw;
@@ -331,6 +348,9 @@ void loop() {
                         int L=8-p, R=8+p; if(L<2)L=2;if(L>14)L=14;if(R<2)R=2;if(R>14)R=14; setMotor(L,R);
                     }
                 }
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
+                delay(200);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
                 setMotor(0,0); delay(50); pidTrack(0,0); step=5; break;
             case 5: setMotor(0,0); all_state &= 0x0F; step = 0; break;
             }
