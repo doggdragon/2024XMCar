@@ -253,7 +253,7 @@ void loop() {
                 while (readGrayBits() == 0) {
                     readDmpYaw();
                     int yi = (int)(((Yaw<0)?Yaw+360:Yaw) + 0.5f);
-                    int p = pidAngle(180, yi);
+                    int p = pidAngle(174, yi);
                     int L=12-p, R=12+p; if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20; setMotor(L,R);
                 }
                 setMotor(0,0); delay(50); pidTrack(0,0); step=4; break;
