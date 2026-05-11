@@ -18,6 +18,16 @@ char track_state = 'T';   // T=tracking, L=lost, X=arc_exit
 uint16_t gray_threshold = 2400;
 uint16_t gray_min_val = 0;
 
+// Mode 4: 8 straight angles (fill from Mode 5 calibration)
+#define M4_ANG1  -38
+#define M4_ANG2  -156
+#define M4_ANG3  -38
+#define M4_ANG4  -156
+#define M4_ANG5  -38
+#define M4_ANG6  -156
+#define M4_ANG7  -38
+#define M4_ANG8  -156
+
 // ==== DMP Yaw ====
 void readDmpYaw() {
     float p, r, y;
@@ -188,7 +198,7 @@ void loop() {
         uint8_t s = all_state & 0x0F;
         if (s==0) all_state=0x01; else if (s==1) all_state=0x02;
         else if (s==2) all_state=0x03; else if (s==3) all_state=0x04;
-        else if (s==4) all_state=0x01;
+        else if (s==4) all_state=0x05; else if (s==5) all_state=0x01;
     }
     if (key == 2) all_state |= 0x10;
 
@@ -381,50 +391,146 @@ void loop() {
 
     case 0x14: {
         digitalWrite(PB9,HIGH); delay(10);
-        while (1) {
+        int m4_ang[8] = {M4_ANG1, M4_ANG2, M4_ANG3, M4_ANG4, M4_ANG5, M4_ANG6, M4_ANG7, M4_ANG8};
+        while (step != 0) {
             switch (step) {
-            case 1: delay(100);
-                while(readGrayBits()==0){readDmpYaw();int yi=(int)(((Yaw<0)?Yaw+360:Yaw)+0.5f);int p=pidAngle(50,yi);int L=10-p,R=10+p;if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20;setMotor(L,R);}
-                setMotor(0,0);delay(50);pidTrack(0,0);step=2;break;
-            case 2: while(readGrayBits()!=0){float fe=getTrackErr(readGrayBits());int p=pidTrack(fe,0);int L=10-p,R=10+p;if(L<2)L=2;if(L>16)L=16;if(R<2)R=2;if(R>16)R=16;setMotor(L,R);}
-                setMotor(0,0);delay(50);pidTrack(0,0);step=3;break;
-            case 3: while(readGrayBits()==0){readDmpYaw();int yi=(int)(((Yaw<0)?Yaw+360:Yaw)+0.5f);int p=pidAngle(129,yi);int L=10-p,R=10+p;if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20;setMotor(L,R);}
-                setMotor(0,0);delay(50);pidTrack(0,0);step=4;break;
-            case 4: while(readGrayBits()!=0){float fe=getTrackErr(readGrayBits());int p=pidTrack(fe,0);int L=8-p,R=8+p;if(L<2)L=2;if(L>16)L=16;if(R<2)R=2;if(R>16)R=16;setMotor(L,R);}
-                setMotor(0,0);delay(50);pidTrack(0,0);step=5;break;
-            case 5: delay(300);
-                while(readGrayBits()==0){readDmpYaw();int yi=(int)(((Yaw<0)?Yaw+360:Yaw)+0.5f);int p=pidAngle(59,yi);int L=10-p,R=10+p;if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20;setMotor(L,R);}
-                setMotor(0,0);delay(100);pidTrack(0,0);step=6;break;
-            case 6: while(readGrayBits()!=0){float fe=getTrackErr(readGrayBits());int p=pidTrack(fe,0);int L=10-p,R=10+p;if(L<2)L=2;if(L>16)L=16;if(R<2)R=2;if(R>16)R=16;setMotor(L,R);}
-                setMotor(0,0);delay(50);pidTrack(0,0);step=7;break;
-            case 7: delay(300);
-                while(readGrayBits()==0){readDmpYaw();int yi=(int)(((Yaw<0)?Yaw+360:Yaw)+0.5f);int p=pidAngle(137,yi);int L=10-p,R=10+p;if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20;setMotor(L,R);}
-                setMotor(0,0);delay(100);pidTrack(0,0);step=8;break;
-            case 8: while(readGrayBits()!=0){float fe=getTrackErr(readGrayBits());int p=pidTrack(fe,0);int L=8-p,R=8+p;if(L<2)L=2;if(L>16)L=16;if(R<2)R=2;if(R>16)R=16;setMotor(L,R);}
-                setMotor(0,0);delay(50);pidTrack(0,0);step=9;break;
-            case 9: delay(300);
-                while(readGrayBits()==0){readDmpYaw();int yi=(int)(((Yaw<0)?Yaw+360:Yaw)+0.5f);int p=pidAngle(65,yi);int L=10-p,R=10+p;if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20;setMotor(L,R);}
-                setMotor(0,0);delay(100);pidTrack(0,0);step=10;break;
-            case 10: while(readGrayBits()!=0){float fe=getTrackErr(readGrayBits());int p=pidTrack(fe,0);int L=10-p,R=10+p;if(L<2)L=2;if(L>16)L=16;if(R<2)R=2;if(R>16)R=16;setMotor(L,R);}
-                setMotor(0,0);delay(50);pidTrack(0,0);step=11;break;
-            case 11: delay(300);
-                while(readGrayBits()==0){readDmpYaw();int yi=(int)(((Yaw<0)?Yaw+360:Yaw)+0.5f);int p=pidAngle(145,yi);int L=10-p,R=10+p;if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20;setMotor(L,R);}
-                setMotor(0,0);delay(100);pidTrack(0,0);step=12;break;
-            case 12: while(readGrayBits()!=0){float fe=getTrackErr(readGrayBits());int p=pidTrack(fe,0);int L=8-p,R=8+p;if(L<2)L=2;if(L>16)L=16;if(R<2)R=2;if(R>16)R=16;setMotor(L,R);}
-                setMotor(0,0);delay(50);pidTrack(0,0);step=13;break;
-            case 13: delay(300);
-                while(readGrayBits()==0){readDmpYaw();int yi=(int)(((Yaw<0)?Yaw+360:Yaw)+0.5f);int p=pidAngle(71,yi);int L=10-p,R=10+p;if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20;setMotor(L,R);}
-                setMotor(0,0);delay(100);pidTrack(0,0);step=14;break;
-            case 14: while(readGrayBits()!=0){float fe=getTrackErr(readGrayBits());int p=pidTrack(fe,0);int L=10-p,R=10+p;if(L<2)L=2;if(L>16)L=16;if(R<2)R=2;if(R>16)R=16;setMotor(L,R);}
-                setMotor(0,0);delay(50);pidTrack(0,0);step=15;break;
-            case 15: delay(300);
-                while(readGrayBits()==0){readDmpYaw();int yi=(int)(((Yaw<0)?Yaw+360:Yaw)+0.5f);int p=pidAngle(150,yi);int L=10-p,R=10+p;if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20;setMotor(L,R);}
-                setMotor(0,0);delay(100);pidTrack(0,0);step=16;break;
-            case 16: while(readGrayBits()!=0){float fe=getTrackErr(readGrayBits());int p=pidTrack(fe,0);int L=8-p,R=8+p;if(L<2)L=2;if(L>16)L=16;if(R<2)R=2;if(R>16)R=16;setMotor(L,R);}
-                setMotor(0,0);delay(50);pidTrack(0,0);step=17;break;
-            case 17: while(1){setMotor(0,0);} break;
+            // odd steps = angle-locked straight
+            case 1: case 3: case 5: case 7: case 9: case 11: case 13: case 15: {
+                int idx = (step - 1) / 2;
+                delay(100);
+                uint32_t t0 = millis();
+                while (1) {
+                    readDmpYaw();
+                    int yi = (int)(((Yaw<0)?Yaw+360:Yaw) + 0.5f);
+                    int p = pidAngle(m4_ang[idx], yi);
+                    int L=14-p, R=14+p; if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20; setMotor(L,R);
+                    if (millis() - t0 > 3000 && readGrayBits() != 0) {
+                        delay(10);
+                        if (readGrayBits() != 0) break;
+                    }
+                }
+                setMotor(0,0);
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
+                delay(500);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
+                delay(50); pidTrack(0,0); step++; break; }
+            // even steps = arc tracking
+            case 2: case 4: case 6: case 8: case 10: case 12: case 14: case 16: {
+                int idx = (step - 2) / 2;
+                uint32_t t0 = millis();
+                yaw_arc_start = Yaw;
+                lost_cnt = 0;
+                int turnL = (idx % 2 == 0) ? 5 : 15;
+                int turnR = (idx % 2 == 0) ? 15 : 5;
+                while (1) {
+                    uint8_t ir = readGrayBits();
+                    if (ir == 0) {
+                        lost_cnt++;
+                        if (lost_cnt > 40 && millis() - t0 > 3000) { track_state = 'X'; break; }
+                        track_state = 'L';
+                        setMotor(turnL, turnR);
+                        if (lost_cnt < 25) delay(5);
+                    } else {
+                        lost_cnt = 0;
+                        track_state = 'T';
+                        float fe = getTrackErr(ir);
+                        int p = pidTrack(fe, 0);
+                        int L=10-p, R=10+p; if(L<2)L=2;if(L>16)L=16;if(R<2)R=2;if(R>16)R=16; setMotor(L,R);
+                    }
+                }
+                setMotor(0,0);
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
+                delay(500);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
+                delay(50); pidTrack(0,0); step++; break; }
+            case 17: setMotor(0,0); all_state &= 0x0F; step = 0; break;
             }
         }
+    } break;
+
+    case 0x15: {
+        digitalWrite(PB9,HIGH); delay(10);
+        int corner = 0;
+        int ang[8] = {0};
+        while (step != 0 && corner < 8) {
+            readDmpYaw();
+            int yi = (int)(((Yaw<0)?Yaw+360:Yaw) + 0.5f);
+            display.clearDisplay();
+            display.setCursor(0,0); display.print(F("C")); display.print(corner+1);
+            display.print(F(" Y:")); display.print(yi);
+            display.setCursor(0,20); display.print(F("K2=go"));
+            display.display();
+            if (digitalRead(PC8) == LOW) {
+                delay(20); while (digitalRead(PC8) == LOW); delay(20);
+                readDmpYaw();
+                int tgt = (int)(((Yaw<0)?Yaw+360:Yaw) + 0.5f);
+                ang[corner] = tgt;
+                digitalWrite(PB8, LOW); delay(50); digitalWrite(PB8, HIGH);
+                // Straight: lock captured angle
+                delay(100);
+                uint32_t t0 = millis();
+                while (1) {
+                    readDmpYaw();
+                    int yi2 = (int)(((Yaw<0)?Yaw+360:Yaw) + 0.5f);
+                    int p = pidAngle(tgt, yi2);
+                    int L=14-p, R=14+p; if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20; setMotor(L,R);
+                    if (millis() - t0 > 3000 && readGrayBits() != 0) {
+                        delay(10);
+                        if (readGrayBits() != 0) break;
+                    }
+                }
+                setMotor(0,0);
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
+                delay(500);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
+                delay(50); pidTrack(0,0);
+                // Arc segment
+                yaw_arc_start = Yaw;
+                lost_cnt = 0;
+                t0 = millis();
+                int turnL = (corner % 2 == 0) ? 5 : 15;
+                int turnR = (corner % 2 == 0) ? 15 : 5;
+                while (1) {
+                    uint8_t ir = readGrayBits();
+                    if (ir == 0) {
+                        lost_cnt++;
+                        if (lost_cnt > 40 && millis() - t0 > 3000) { track_state = 'X'; break; }
+                        track_state = 'L';
+                        setMotor(turnL, turnR);
+                        if (lost_cnt < 25) delay(5);
+                    } else {
+                        lost_cnt = 0;
+                        track_state = 'T';
+                        float fe = getTrackErr(ir);
+                        int p = pidTrack(fe, 0);
+                        int L=10-p, R=10+p; if(L<2)L=2;if(L>16)L=16;if(R<2)R=2;if(R>16)R=16; setMotor(L,R);
+                    }
+                }
+                setMotor(0,0);
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
+                delay(500);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
+                delay(50); pidTrack(0,0);
+                corner++;
+            }
+            delay(30);
+        }
+        while (1) {
+            display.clearDisplay();
+            display.setCursor(0,0);
+            for (int i = 0; i < 4; i++) { display.print(ang[i]); display.print(F(" ")); }
+            display.setCursor(0,10);
+            for (int i = 4; i < 8; i++) { display.print(ang[i]); display.print(F(" ")); }
+            display.setCursor(0,20); display.print(F("K2=exit"));
+            display.display();
+            if (digitalRead(PC8) == LOW) {
+                delay(20); while (digitalRead(PC8) == LOW); delay(20);
+                break;
+            }
+            delay(30);
+        }
+        all_state &= 0x0F;
+        digitalWrite(PB9, LOW);
     } break;
     }
 
