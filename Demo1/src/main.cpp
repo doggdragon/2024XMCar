@@ -28,7 +28,7 @@ void readDmpYaw() {
 
 uint8_t readGrayBits();  // fwd decl
 
-// ==== Throttled OLED (every ~200ms) ====
+// ==== OLED tick ====
 void oledTick() {
     static uint32_t last = 0;
     uint32_t now = millis();
@@ -37,14 +37,17 @@ void oledTick() {
     display.clearDisplay();
     display.setCursor(0,0); display.print(F("Y:")); display.print((int)Yaw);
     display.print(F(" L:")); display.print(motorL_pwm); display.print(F(" R:")); display.print(motorR_pwm);
-    display.setCursor(0,10); display.print(F("M:")); display.print(all_state,HEX);
+    display.setCursor(0,10);
+    display.print(F("M:")); display.print(all_state,HEX);
     display.print(F(" S:")); display.print(step);
-    display.print(F(" lost:")); display.print(lost_cnt);
+    display.print(F(" "));
+    for (int i = 1; i <= 4; i++) {
+        if (i == step) { display.print(F("[")); display.print(i); display.print(F("]")); }
+        else { display.print(F(" ")); display.print(i); }
+    }
+    display.setCursor(0,20);
+    display.print(F("lost:")); display.print(lost_cnt);
     display.print(F(" ")); display.print(track_state);
-    uint8_t gb = readGrayBits();
-    display.setCursor(0,20); display.print(F("I:0x")); display.print(gb,HEX);
-    display.print(F(" mn:")); display.print(gray_min_val);
-    display.print(F(" dY:")); display.print((int)(Yaw - yaw_arc_start));
     display.display();
 }
 
@@ -172,24 +175,12 @@ void setup() {
 
     Wire.setSDA(PB7); Wire.setSCL(PB6); Wire.begin(); Wire.setClock(100000);
 
-    display.clearDisplay();
-    display.setCursor(0,0); display.println(F("DMP Init..."));
-    display.display();
     u8 dmp_r = MPU6050_DMP_Init();
-
-    display.clearDisplay();
-    if (dmp_r == 0) {
-        display.setCursor(0,0); display.print(F("RDY th=")); display.print(gray_threshold);
-    } else {
-        display.setCursor(0,0); display.print(F("DMP ERR E")); display.println(dmp_r);
-    }
-    display.setCursor(0,10); display.print(F("M:0x")); display.println(all_state,HEX);
-    display.setCursor(0,20); display.println(F("Key1=mode Key2=run"));
-    display.display();
 }
 
 void loop() {
     readDmpYaw();
+    oledTick();
 
     uint8_t ir = readGrayBits();
     uint8_t key = readKey();
@@ -218,7 +209,7 @@ void loop() {
 
     case 0x12: {
         digitalWrite(PB9,HIGH); delay(100);
-        while (1) {
+        while (step != 0) {
             switch (step) {
             case 1:
                 while (readGrayBits() == 0) {
@@ -238,6 +229,7 @@ void loop() {
                         if (lost_cnt > 160) { track_state = 'X'; break; }
                         track_state = 'L';
                         setMotor(8, 14);
+                        delay(10);
                     } else {
                         lost_cnt = 0;
                         track_state = 'T';
@@ -246,8 +238,6 @@ void loop() {
                         int L=10-p, R=10+p; if(L<2)L=2;if(L>16)L=16;if(R<2)R=2;if(R>16)R=16; setMotor(L,R);
                     }
                 }
-                // Freeze display 2s so user can read exit dY/lost
-                oledTick();
                 setMotor(0,0); delay(2000); step=3; break;
             case 3:
                 while (readGrayBits() == 0) {
@@ -267,6 +257,7 @@ void loop() {
                         if (lost_cnt > 160) { track_state = 'X'; break; }
                         track_state = 'L';
                         setMotor(8, 14);
+                        delay(10);
                     } else {
                         lost_cnt = 0;
                         track_state = 'T';
@@ -275,46 +266,73 @@ void loop() {
                         int L=10-p, R=10+p; if(L<2)L=2;if(L>16)L=16;if(R<2)R=2;if(R>16)R=16; setMotor(L,R);
                     }
                 }
-                oledTick();
                 setMotor(0,0); delay(2000); step=5; break;
-            case 5: setMotor(0,0); all_state &= 0x0F; break;
+            case 5: setMotor(0,0); all_state &= 0x0F; step = 0; break;
             }
         }
     } break;
 
     case 0x13: {
         digitalWrite(PB9,HIGH); delay(10);
-        while (1) {
+        while (step != 0) {
             switch (step) {
             case 1: delay(100);
                 while (readGrayBits() == 0) {
                     readDmpYaw();
                     int yi = (int)(((Yaw<0)?Yaw+360:Yaw) + 0.5f);
-                    int p = pidAngle(50, yi);
+                    int p = pidAngle(-38, yi);
                     int L=12-p, R=12+p; if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20; setMotor(L,R);
                 }
                 setMotor(0,0); delay(50); pidTrack(0,0); step=2; break;
             case 2:
-                while (readGrayBits() != 0) {
-                    float fe = getTrackErr(readGrayBits()); int p = pidTrack(fe, 0);
-                    int L=10-p, R=10+p; if(L<2)L=2;if(L>16)L=16;if(R<2)R=2;if(R>16)R=16; setMotor(L,R);
+                yaw_arc_start = Yaw;
+                lost_cnt = 0;
+                while (1) {
+                    uint8_t ir = readGrayBits();
+                    if (ir == 0) {
+                        lost_cnt++;
+                        if (lost_cnt > 40) { track_state = 'X'; break; }
+                        track_state = 'L';
+                        setMotor(5, 15);
+                        if (lost_cnt < 25) delay(5);
+                    } else {
+                        lost_cnt = 0;
+                        track_state = 'T';
+                        float fe = getTrackErr(ir);
+                        int p = pidTrack(fe, 0);
+                        int L=8-p, R=8+p; if(L<2)L=2;if(L>14)L=14;if(R<2)R=2;if(R>14)R=14; setMotor(L,R);
+                    }
                 }
                 setMotor(0,0); delay(50); pidTrack(0,0); step=3; break;
             case 3:
                 while (readGrayBits() == 0) {
                     readDmpYaw();
                     int yi = (int)(((Yaw<0)?Yaw+360:Yaw) + 0.5f);
-                    int p = pidAngle(130, yi);
+                    int p = pidAngle(-140, yi);
                     int L=12-p, R=12+p; if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20; setMotor(L,R);
                 }
                 setMotor(0,0); delay(50); pidTrack(0,0); step=4; break;
             case 4:
-                while (readGrayBits() != 0) {
-                    float fe = getTrackErr(readGrayBits()); int p = pidTrack(fe, 0);
-                    int L=8-p, R=8+p; if(L<2)L=2;if(L>16)L=16;if(R<2)R=2;if(R>16)R=16; setMotor(L,R);
+                yaw_arc_start = Yaw;
+                lost_cnt = 0;
+                while (1) {
+                    uint8_t ir = readGrayBits();
+                    if (ir == 0) {
+                        lost_cnt++;
+                        if (lost_cnt > 40) { track_state = 'X'; break; }
+                        track_state = 'L';
+                        setMotor(15, 5);
+                        if (lost_cnt < 25) delay(5);
+                    } else {
+                        lost_cnt = 0;
+                        track_state = 'T';
+                        float fe = getTrackErr(ir);
+                        int p = pidTrack(fe, 0);
+                        int L=8-p, R=8+p; if(L<2)L=2;if(L>14)L=14;if(R<2)R=2;if(R>14)R=14; setMotor(L,R);
+                    }
                 }
                 setMotor(0,0); delay(50); pidTrack(0,0); step=5; break;
-            case 5: while(1){setMotor(0,0);} break;
+            case 5: setMotor(0,0); all_state &= 0x0F; step = 0; break;
             }
         }
     } break;
@@ -368,14 +386,4 @@ void loop() {
     } break;
     }
 
-    // OLED update
-    display.clearDisplay();
-    display.setCursor(0,0); display.print(F("Y:")); display.print((int)Yaw);
-    display.print(F(" L:")); display.print(motorL_pwm); display.print(F(" R:")); display.print(motorR_pwm);
-    display.setCursor(0,10); display.print(F("M:")); display.print(all_state,HEX);
-    display.print(F(" S:")); display.print(step);
-    display.print(F(" lost:")); display.print(lost_cnt);
-    display.setCursor(0,20); display.print(F("I:0x")); display.print(ir,HEX);
-    display.print(F(" mn:")); display.print(gray_min_val);
-    display.display();
 }
