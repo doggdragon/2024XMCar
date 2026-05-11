@@ -219,9 +219,9 @@ void loop() {
                     int L=14-p, R=14+p; if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20; setMotor(L,R);
                 }
                 setMotor(0,0);
-                digitalWrite(PB9, HIGH); digitalWrite(PB8, HIGH);
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
                 delay(500);
-                digitalWrite(PB9, LOW);  digitalWrite(PB8, LOW);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
                 delay(50); pidTrack(0,0); step=2; break;
             case 2:
                 yaw_arc_start = Yaw;
@@ -242,9 +242,9 @@ void loop() {
                     }
                 }
                 setMotor(0,0);
-                digitalWrite(PB9, HIGH); digitalWrite(PB8, HIGH);
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
                 delay(500);
-                digitalWrite(PB9, LOW);  digitalWrite(PB8, LOW);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
                 delay(50); pidTrack(0,0); step=3; break;
             case 3:
                 while (readGrayBits() == 0) {
@@ -254,9 +254,9 @@ void loop() {
                     int L=14-p, R=14+p; if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20; setMotor(L,R);
                 }
                 setMotor(0,0);
-                digitalWrite(PB9, HIGH); digitalWrite(PB8, HIGH);
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
                 delay(500);
-                digitalWrite(PB9, LOW);  digitalWrite(PB8, LOW);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
                 delay(50); pidTrack(0,0); step=4; break;
             case 4:
                 yaw_arc_start = Yaw;
@@ -277,9 +277,9 @@ void loop() {
                     }
                 }
                 setMotor(0,0);
-                digitalWrite(PB9, HIGH); digitalWrite(PB8, HIGH);
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
                 delay(500);
-                digitalWrite(PB9, LOW);  digitalWrite(PB8, LOW);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
                 delay(50); pidTrack(0,0); step=5; break;
             case 5: setMotor(0,0); all_state &= 0x0F; step = 0; break;
             }
@@ -303,9 +303,9 @@ void loop() {
                     }
                 }
                 setMotor(0,0);
-                digitalWrite(PB9, HIGH); digitalWrite(PB8, HIGH);
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
                 delay(500);
-                digitalWrite(PB9, LOW);  digitalWrite(PB8, LOW);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
                 delay(50); pidTrack(0,0); step=2; break; }
             case 2: {
                 uint32_t t0 = millis();
@@ -328,9 +328,9 @@ void loop() {
                     }
                 }
                 setMotor(0,0);
-                digitalWrite(PB9, HIGH); digitalWrite(PB8, HIGH);
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
                 delay(500);
-                digitalWrite(PB9, LOW);  digitalWrite(PB8, LOW);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
                 delay(50); pidTrack(0,0); step=3; break; }
             case 3: {
                 uint32_t t0 = millis();
@@ -345,9 +345,9 @@ void loop() {
                     }
                 }
                 setMotor(0,0);
-                digitalWrite(PB9, HIGH); digitalWrite(PB8, HIGH);
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
                 delay(500);
-                digitalWrite(PB9, LOW);  digitalWrite(PB8, LOW);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
                 delay(50); pidTrack(0,0); step=4; break; }
             case 4: {
                 uint32_t t0 = millis();
@@ -370,9 +370,9 @@ void loop() {
                     }
                 }
                 setMotor(0,0);
-                digitalWrite(PB9, HIGH); digitalWrite(PB8, HIGH);
+                digitalWrite(PB9, HIGH); digitalWrite(PB8, LOW);
                 delay(500);
-                digitalWrite(PB9, LOW);  digitalWrite(PB8, LOW);
+                digitalWrite(PB9, LOW);  digitalWrite(PB8, HIGH);
                 delay(50); pidTrack(0,0); step=5; break; }
             case 5: setMotor(0,0); all_state &= 0x0F; step = 0; break;
             }
