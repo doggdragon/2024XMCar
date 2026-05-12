@@ -19,13 +19,13 @@ uint16_t gray_threshold = 2400;
 uint16_t gray_min_val = 0;
 
 // Mode 4: 8 straight angles (fill from Mode 5 calibration)
-#define M4_ANG1  -38
+#define M4_ANG1  -40
 #define M4_ANG2  -156
-#define M4_ANG3  -38
-#define M4_ANG4  -156
-#define M4_ANG5  -38
-#define M4_ANG6  -156
-#define M4_ANG7  -38
+#define M4_ANG3  -32
+#define M4_ANG4  -152
+#define M4_ANG5  -32
+#define M4_ANG6  -152
+#define M4_ANG7  -33
 #define M4_ANG8  -156
 
 // ==== DMP Yaw ====
@@ -58,6 +58,7 @@ void oledTick() {
     display.setCursor(0,20);
     display.print(F("lost:")); display.print(lost_cnt);
     display.print(F(" ")); display.print(track_state);
+    display.print(F(" mn:")); display.print(gray_min_val);
     display.display();
 }
 
@@ -307,7 +308,7 @@ void loop() {
                     int yi = (int)(((Yaw<0)?Yaw+360:Yaw) + 0.5f);
                     int p = pidAngle(-38, yi);
                     int L=14-p, R=14+p; if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20; setMotor(L,R);
-                    if (millis() - t0 > 3000 && readGrayBits() != 0) {
+                    if (millis() - t0 > 2000 && readGrayBits() != 0) {
                         delay(10);
                         if (readGrayBits() != 0) break;
                     }
@@ -325,7 +326,7 @@ void loop() {
                     uint8_t ir = readGrayBits();
                     if (ir == 0) {
                         lost_cnt++;
-                        if (lost_cnt > 40 && millis() - t0 > 3000) { track_state = 'X'; break; }
+                        if (lost_cnt > 40 && millis() - t0 > 2000) { track_state = 'X'; break; }
                         track_state = 'L';
                         setMotor(5, 15);
                         if (lost_cnt < 25) delay(5);
@@ -349,7 +350,7 @@ void loop() {
                     int yi = (int)(((Yaw<0)?Yaw+360:Yaw) + 0.5f);
                     int p = pidAngle(-156, yi);
                     int L=14-p, R=14+p; if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20; setMotor(L,R);
-                    if (millis() - t0 > 3000 && readGrayBits() != 0) {
+                    if (millis() - t0 > 2000 && readGrayBits() != 0) {
                         delay(10);
                         if (readGrayBits() != 0) break;
                     }
@@ -367,7 +368,7 @@ void loop() {
                     uint8_t ir = readGrayBits();
                     if (ir == 0) {
                         lost_cnt++;
-                        if (lost_cnt > 40 && millis() - t0 > 3000) { track_state = 'X'; break; }
+                        if (lost_cnt > 40 && millis() - t0 > 2000) { track_state = 'X'; break; }
                         track_state = 'L';
                         setMotor(15, 5);
                         if (lost_cnt < 25) delay(5);
@@ -404,7 +405,7 @@ void loop() {
                     int yi = (int)(((Yaw<0)?Yaw+360:Yaw) + 0.5f);
                     int p = pidAngle(m4_ang[idx], yi);
                     int L=14-p, R=14+p; if(L>20)L=20;if(L<-20)L=-20;if(R>20)R=20;if(R<-20)R=-20; setMotor(L,R);
-                    if (millis() - t0 > 3000 && readGrayBits() != 0) {
+                    if (millis() - t0 > 2000 && readGrayBits() != 0) {
                         delay(10);
                         if (readGrayBits() != 0) break;
                     }
@@ -426,7 +427,7 @@ void loop() {
                     uint8_t ir = readGrayBits();
                     if (ir == 0) {
                         lost_cnt++;
-                        if (lost_cnt > 40 && millis() - t0 > 3000) { track_state = 'X'; break; }
+                        if (lost_cnt > 40 && millis() - t0 > 2000) { track_state = 'X'; break; }
                         track_state = 'L';
                         setMotor(turnL, turnR);
                         if (lost_cnt < 25) delay(5);
@@ -445,7 +446,12 @@ void loop() {
                 delay(50); pidTrack(0,0);
                 if (step == 4 || step == 8 || step == 12) {
                     MPU6050_DMP_Init();
-                    delay(100);
+                    delay(50);
+                    float sum = 0;
+                    for (int i = 0; i < 5; i++) {
+                        readDmpYaw(); sum += Yaw; delay(5);
+                    }
+                    Yaw = sum / 5;
                 }
                 step++; break; }
             case 17: setMotor(0,0); all_state &= 0x0F; step = 0; break;
@@ -518,7 +524,12 @@ void loop() {
                 delay(50); pidTrack(0,0);
                 if (corner == 2 || corner == 4 || corner == 6) {
                     MPU6050_DMP_Init();
-                    delay(100);
+                    delay(50);
+                    float sum = 0;
+                    for (int i = 0; i < 5; i++) {
+                        readDmpYaw(); sum += Yaw; delay(5);
+                    }
+                    Yaw = sum / 5;
                 }
                 corner++;
             }
